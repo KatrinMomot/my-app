@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Моё приложение</title>
+  <link rel="manifest" href="manifest.json">
+  <style>
+    body { font-family: sans-serif; padding: 20px; }
+  </style>
+</head>
+<body>
+  <h1>Привет! Я работаю как приложение.</h1>
+  <input type="text" id="item" placeholder="Купить...">
+  <button onclick="addItem()">Добавить</button>
+  <ul id="list"></ul>
+
+  <script>
+    function addItem() {
+      let input = document.getElementById('item');
+      let text = input.value.trim();
+      if (text) {
+        let li = document.createElement('li');
+        li.textContent = text;
+        document.getElementById('list').appendChild(li);
+        input.value = '';
+      }
+    }
+  </script>
+</body>
+</html>
