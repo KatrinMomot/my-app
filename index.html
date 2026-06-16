@@ -1816,6 +1816,86 @@
     onAuthStateChanged(auth, async user => { if (user) { if (!currentUserData) await loadMainApp(user); } else { if (unsubscribeContacts) unsubscribeContacts(); if (unsubscribeMessages) unsubscribeMessages(); if (statusInterval) clearInterval(statusInterval); currentUserData = null; showPage('loginPage'); renderAuthAccounts(); } });
     applyTheme(); renderAuthAccounts(); tryAutoLogin();
     setTimeout(() => { const a = document.getElementById('profileAvatar'); if (a) a.onclick = () => document.getElementById('newAvatarInput').click(); }, 1000);
+    let deferredPrompt; // здесь будем хранить событие установки
+
+// Слушаем beforeinstallprompt
+window.addEventListener('beforeinstallprompt', (e) => {
+  // Отменяем автоматический показ мини-баннера
+  e.preventDefault();
+  // Сохраняем событие, чтобы использовать позже
+  deferredPrompt = e;
+
+  // Показываем свою кнопку установки
+  showInstallButton();
+});
+
+// Проверяем, не установлено ли уже приложение
+function isAppInstalled() {
+  // Если открыто в standalone-режиме (как PWA) – значит установлено
+  if (window.matchMedia('(display-mode: standalone)').matches) {
+    return true;
+  }
+  // Некоторые браузеры добавляют свойство navigator.standalone (iOS Safari)
+  if (navigator.standalone) {
+    return true;
+  }
+  return false;
+}
+
+// Показываем кнопку установки (можно стилизовать как угодно)
+function showInstallButton() {
+  // Не показываем, если уже установлено
+  if (isAppInstalled()) return;
+  
+  // Удаляем старую кнопку, если есть
+  const oldBtn = document.getElementById('installPWAButton');
+  if (oldBtn) oldBtn.remove();
+
+  // Создаём плавающую кнопку
+  const btn = document.createElement('button');
+  btn.id = 'installPWAButton';
+  btn.textContent = '📲 Установить приложение';
+  btn.style.cssText = `
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    z-index: 99999;
+    background: #00d4ff;
+    color: black;
+    border: none;
+    padding: 15px 20px;
+    border-radius: 30px;
+    font-size: 16px;
+    font-weight: bold;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+    cursor: pointer;
+  `;
+
+  btn.addEventListener('click', async () => {
+    if (!deferredPrompt) return;
+    // Показываем стандартный диалог установки
+    deferredPrompt.prompt();
+    const { outcome } = await deferredPrompt.userChoice;
+    console.log(`Пользователь ${outcome === 'accepted' ? 'установил' : 'отклонил'} приложение`);
+    // Очищаем сохранённое событие
+    deferredPrompt = null;
+    // Убираем кнопку после выбора
+    btn.remove();
+  });
+
+  document.body.appendChild(btn);
+}
+
+// Проверяем при загрузке страницы
+window.addEventListener('load', () => {
+  // Если приложение ещё не установлено, а событие уже могло произойти раньше – 
+  // кнопка появится только после того, как браузер вызовет beforeinstallprompt.
+  // Но на всякий случай сразу проверим и скроем кнопку, если уже установлено.
+  if (isAppInstalled()) {
+    const oldBtn = document.getElementById('installPWAButton');
+    if (oldBtn) oldBtn.remove();
+  }
+});
   </script>
 </body>
 </html>
