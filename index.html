@@ -89,35 +89,26 @@
             border-radius: var(--radius-sm);
         }
 
-        /* --- Новая кнопка установки --- */
-        .install-btn {
-            background: var(--primary);
-            color: #fff;
-            border: none;
-            padding: 0.4rem 1rem;
-            font-weight: 700;
-            font-size: 0.8rem;
-            border-radius: var(--radius-sm);
-            cursor: pointer;
-            transition: all var(--transition);
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            white-space: nowrap;
-            height: 36px;
-            display: inline-flex;
+        /* ===== КНОПКА УСТАНОВКИ PWA ===== */
+        #installPWAButton {
+            display: none;               /* скрыта по умолчанию */
             align-items: center;
             gap: 0.4rem;
-            box-shadow: var(--shadow-sm);
+            margin-left: 1rem;
+            padding: 0.4rem 1.2rem;
+            font-size: 0.85rem;
+            white-space: nowrap;
+            border: 2px solid var(--primary);
+            background: #fff;
+            color: var(--primary);
+            font-weight: 700;
+            cursor: pointer;
+            transition: all var(--transition);
+            border-radius: var(--radius-sm);
+            line-height: 1.2;
         }
-        .install-btn:hover {
-            background: var(--primary-hover);
-            transform: scale(1.02);
-        }
-        .install-btn:active {
-            transform: scale(0.96);
-        }
-        .install-btn.hidden {
-            display: none !important;
+        #installPWAButton:hover {
+            background: #fdf2f4;
         }
 
         .nav-links {
@@ -150,6 +141,7 @@
         .nav-btn:hover {
             color: #1a1a1a;
             background: #f1f18c;
+            
         }
         .nav-btn.active {
             color: var(--primary);
@@ -210,6 +202,7 @@
             display: block;
             transition: transform 0.4s ease;
         }
+        
         .hero-info {
             display: flex;
             flex-direction: column;
@@ -1193,8 +1186,8 @@
     <div class="app-wrapper">
         <nav class="navbar">
             <div class="logo">ВАСТА</div>
-            <!-- Кнопка установки приложения -->
-            <button class="install-btn hidden" id="installAppBtn">📲 Установить</button>
+            <!-- ===== КНОПКА УСТАНОВКИ PWA (справа от названия) ===== -->
+            <button id="installPWAButton" title="Установить приложение">📲 Установить</button>
             <div class="nav-links">
                 <button class="nav-btn active" data-target="home-section">Главная</button>
                 <button class="nav-btn" data-target="vasta-section">Васту</button>
@@ -1859,15 +1852,12 @@
                 });
             }
 
-            // ============ ВЫХОД (с полным сбросом админки) ============
+            // ============ ВЫХОД ============
             const logoutBtn = document.getElementById('logoutBtn');
             if (logoutBtn) {
                 logoutBtn.addEventListener('click', () => {
                     currentUser = null;
                     localStorage.removeItem('vastaCurrentUser');
-                    // Сбрасываем админский статус
-                    isAdmin = false;
-                    localStorage.removeItem('vastaIsAdmin');
                     hideEditProfileForm();
                     updateAccountUI();
                     updateAdminUI();
@@ -2257,12 +2247,11 @@
                     const imageUrls = [];
                     allImgs.forEach(img => imageUrls.push(img.src));
                     if (moreImg) {
-                        // Получаем все URL из data-атрибутов или собираем из DOM
                         const postId = grid.getAttribute('data-post-id');
                         const card = grid.closest('.card');
                         if (card && card._allImageUrls) {
                             const allUrls = card._allImageUrls;
-                            const startIndex = allImgs.length; // индекс первого скрытого
+                            const startIndex = allImgs.length;
                             openImageViewer(allUrls, startIndex);
                             return;
                         }
@@ -2474,11 +2463,9 @@
                         html += '</div>';
                     });
                     postsContainer.innerHTML = html;
-                    // Сохраняем allImageUrls в каждой карточке для image viewer
                     const cards = postsContainer.querySelectorAll('.card');
                     cards.forEach(card => {
                         const docId = card.getAttribute('data-post-id');
-                        // Найдём данные в кеше или из DOM
                         const grid = card.querySelector('.post-images-grid');
                         if (grid) {
                             const imgs = grid.querySelectorAll('.grid-img-item');
@@ -2487,7 +2474,6 @@
                             card._allImageUrls = urls;
                         }
                     });
-                    // Заполним _allImageUrls из querySnapshot
                     querySnapshot.forEach(function(doc) {
                         const card = postsContainer.querySelector('.card[data-post-id="' + doc.id +
                             '"]');
@@ -2572,84 +2558,45 @@
                 adminFormId: 'astrology-admin-form'
             });
 
-            // ============ УСТАНОВКА ПРИЛОЖЕНИЯ (PWA) ============
-            let deferredPrompt = null;
-            const installBtn = document.getElementById('installAppBtn');
+            // ============ PWA: УСТАНОВКА ПРИЛОЖЕНИЯ ============
+            let deferredPrompt;
+            const installButton = document.getElementById('installPWAButton');
 
-            function showInstallButton(show) {
-                if (installBtn) {
-                    if (show) {
-                        installBtn.classList.remove('hidden');
-                    } else {
-                        installBtn.classList.add('hidden');
-                    }
+            function isPWAInstalled() {
+                return window.matchMedia('(display-mode: standalone)').matches ||
+                       (navigator.standalone === true);
+            }
+
+            function showInstallButton() {
+                if (installButton && !isPWAInstalled()) {
+                    installButton.style.display = 'inline-flex';
                 }
             }
 
-            // Проверяем, установлено ли уже приложение
-            function isAppInstalled() {
-                // Для Android/Chrome: display-mode
-                if (window.matchMedia('(display-mode: standalone)').matches) return true;
-                // Для iOS (Safari)
-                if (window.navigator.standalone === true) return true;
-                return false;
+            function hideInstallButton() {
+                if (installButton) installButton.style.display = 'none';
             }
 
-            if (installBtn) {
-                // Сначала скрываем, если уже установлено
-                if (isAppInstalled()) {
-                    showInstallButton(false);
-                }
+            window.addEventListener('beforeinstallprompt', (e) => {
+                e.preventDefault();
+                deferredPrompt = e;
+                showInstallButton();
+            });
 
-                // Слушаем событие beforeinstallprompt
-                window.addEventListener('beforeinstallprompt', (e) => {
-                    e.preventDefault();
-                    deferredPrompt = e;
-                    // Показываем кнопку только если не установлено
-                    if (!isAppInstalled()) {
-                        showInstallButton(true);
-                    }
-                });
-
-                // При клике по кнопке
-                installBtn.addEventListener('click', async () => {
+            if (installButton) {
+                installButton.addEventListener('click', async () => {
                     if (!deferredPrompt) return;
                     deferredPrompt.prompt();
-                    const result = await deferredPrompt.userChoice;
-                    if (result.outcome === 'accepted') {
-                        console.log('Приложение установлено');
-                        showInstallButton(false);
-                    } else {
-                        console.log('Установка отклонена');
-                    }
+                    const { outcome } = await deferredPrompt.userChoice;
+                    console.log(`PWA install outcome: ${outcome}`);
                     deferredPrompt = null;
+                    hideInstallButton();
                 });
-
-                // Скрываем после установки (событие appinstalled)
-                window.addEventListener('appinstalled', () => {
-                    showInstallButton(false);
-                    deferredPrompt = null;
-                });
-
-                // Также проверяем при изменении display-mode (если пользователь установил через меню браузера)
-                window.matchMedia('(display-mode: standalone)').addEventListener('change', (e) => {
-                    if (e.matches) {
-                        showInstallButton(false);
-                    } else {
-                        // Если вдруг режим изменился, но приложение не установлено – можно показать, но лучше проверить
-                        if (!isAppInstalled() && deferredPrompt) {
-                            showInstallButton(true);
-                        }
-                    }
-                });
-
-                // Для iOS: если открыто в Safari и не в standalone, показываем кнопку? 
-                // Но iOS не поддерживает beforeinstallprompt, поэтому скрываем всегда на iOS.
-                const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
-                if (isIOS) {
-                    showInstallButton(false);
-                }
             }
+
+            window.addEventListener('load', () => {
+                if (isPWAInstalled()) hideInstallButton();
+            });
 
             // ============ ИНИЦИАЛИЗАЦИЯ ============
             updateAccountUI();
