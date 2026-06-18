@@ -2559,64 +2559,72 @@
             });
 
             // ========== PWA: УСТАНОВКА ПРИЛОЖЕНИЯ ==========
+            // ========== PWA: УСТАНОВКА ПРИЛОЖЕНИЯ (с резервной инструкцией) ==========
             let deferredPrompt;
             const installButton = document.getElementById('installPWAButton');
             
             function isPWAInstalled() {
-              return window.matchMedia('(display-mode: standalone)').matches ||
-                     (navigator.standalone === true);
+                return window.matchMedia('(display-mode: standalone)').matches ||
+                       (navigator.standalone === true);
             }
             
             function showInstallButton() {
-              if (installButton && !isPWAInstalled()) {
-                installButton.style.display = 'inline-flex';
-              }
+                if (installButton && !isPWAInstalled()) {
+                    installButton.style.display = 'inline-flex';
+                    // Меняем текст кнопки в зависимости от платформы
+                    const isIOS = /iphone|ipad|ipod/.test(navigator.userAgent.toLowerCase());
+                    installButton.textContent = isIOS ? '📲 Установить (инструкция)' : '📲 Установить приложение';
+                }
             }
             
             function hideInstallButton() {
-              if (installButton) installButton.style.display = 'none';
+                if (installButton) installButton.style.display = 'none';
             }
             
+            // Перехватываем автоматическое предложение (если браузер его вызовет)
             window.addEventListener('beforeinstallprompt', (e) => {
-              e.preventDefault();
-              deferredPrompt = e;
-              showInstallButton();
+                e.preventDefault();
+                deferredPrompt = e;
+                showInstallButton();
             });
             
             if (installButton) {
-              installButton.addEventListener('click', async () => {
-                if (deferredPrompt) {
-                  deferredPrompt.prompt();
-                  const { outcome } = await deferredPrompt.userChoice;
-                  console.log('Результат установки:', outcome);
-                  deferredPrompt = null;
-                  hideInstallButton();
-                } else {
-                  // Если событие не пришло, но мы в Chrome/Edge, возможно, нужно перезагрузить или очистить кэш
-                  const ua = navigator.userAgent.toLowerCase();
-                  const isChrome = ua.includes('chrome') || ua.includes('crios');
-                  const isEdge = ua.includes('edg');
-                  const isIOS = /iphone|ipad|ipod/.test(ua);
-                  
-                  if (isIOS) {
-                    alert('Чтобы установить приложение, нажмите кнопку «Поделиться» (квадрат со стрелкой вверх) и выберите «На экран «Домой»».');
-                  } else if (isChrome || isEdge) {
-                    alert('Установка временно недоступна. Попробуйте очистить кэш браузера и перезагрузить страницу.');
-                  } else {
-                    alert('Ваш браузер не поддерживает быструю установку. Откройте сайт в Chrome или Edge.');
-                  }
-                }
-              });
+                installButton.addEventListener('click', async () => {
+                    if (deferredPrompt) {
+                        // Автоматическая установка
+                        deferredPrompt.prompt();
+                        const { outcome } = await deferredPrompt.userChoice;
+                        console.log('Результат установки:', outcome);
+                        deferredPrompt = null;
+                        hideInstallButton();
+                    } else {
+                        // Резервная инструкция
+                        const ua = navigator.userAgent.toLowerCase();
+                        const isIOS = /iphone|ipad|ipod/.test(ua);
+                        const isAndroid = /android/.test(ua);
+                        const isChrome = ua.includes('chrome') || ua.includes('crios');
+                        const isEdge = ua.includes('edg');
+                        const isSamsung = ua.includes('samsungbrowser');
+            
+                        let message = '';
+                        if (isIOS) {
+                            message = '📱 Чтобы установить приложение:\n1. Нажмите кнопку «Поделиться» (квадрат со стрелкой вверх)\n2. Выберите «На экран «Домой»»\n3. Нажмите «Добавить»';
+                        } else if (isAndroid && (isChrome || isEdge || isSamsung)) {
+                            message = '📱 Чтобы установить приложение:\n1. Нажмите на значок меню (⋮ или ⋯) в адресной строке\n2. Выберите «Установить приложение» или «Добавить на главный экран»\n3. Следуйте подсказкам на экране';
+                        } else {
+                            message = '📱 Ваш браузер поддерживает установку через меню.\nНайдите пункт «Установить» или «Добавить на главный экран» в настройках страницы.';
+                        }
+                        alert(message);
+                    }
+                });
             }
             
-            // При загрузке: если приложение не установлено, через 1 сек пробуем показать кнопку
+            // При загрузке страницы показываем кнопку, если приложение не установлено
             window.addEventListener('load', () => {
-              if (!isPWAInstalled()) {
-                setTimeout(() => {
-                  // Если deferredPrompt ещё не пришёл, всё равно покажем (вдруг он придёт позже)
-                  showInstallButton();
-                }, 1000);
-              }
+                if (!isPWAInstalled()) {
+                    // Небольшая задержка, чтобы не перекрывать контент сразу
+                    setTimeout(showInstallButton, 800);
+                }
             });
 
             // ============ ИНИЦИАЛИЗАЦИЯ ============
