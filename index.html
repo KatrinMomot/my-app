@@ -88,6 +88,38 @@
             text-transform: uppercase;
             border-radius: var(--radius-sm);
         }
+
+        /* --- Новая кнопка установки --- */
+        .install-btn {
+            background: var(--primary);
+            color: #fff;
+            border: none;
+            padding: 0.4rem 1rem;
+            font-weight: 700;
+            font-size: 0.8rem;
+            border-radius: var(--radius-sm);
+            cursor: pointer;
+            transition: all var(--transition);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            white-space: nowrap;
+            height: 36px;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            box-shadow: var(--shadow-sm);
+        }
+        .install-btn:hover {
+            background: var(--primary-hover);
+            transform: scale(1.02);
+        }
+        .install-btn:active {
+            transform: scale(0.96);
+        }
+        .install-btn.hidden {
+            display: none !important;
+        }
+
         .nav-links {
             display: flex;
             gap: 0;
@@ -117,8 +149,7 @@
         }
         .nav-btn:hover {
             color: #1a1a1a;
-            background: #fafaf8;
-            border-bottom-color: #d0d0d0;
+            background: #f1f18c;
         }
         .nav-btn.active {
             color: var(--primary);
@@ -166,7 +197,7 @@
             width: 100%;
             aspect-ratio: 3/4;
             overflow: hidden;
-            border: 5px solid #46973cbe;
+            border: 5px solid #f7fda9be;
             background: #e8e0d5;
             flex-shrink: 0;
             border-radius: var(--radius-sm);
@@ -179,7 +210,6 @@
             display: block;
             transition: transform 0.4s ease;
         }
-        
         .hero-info {
             display: flex;
             flex-direction: column;
@@ -213,7 +243,7 @@
             font-weight: 400;
             border-left: 4px solid var(--primary);
             padding: 1.2rem 1.5rem;
-            background: #fdfdfb;
+            background: #f9f990;
         }
         .action-btn {
             background: var(--primary);
@@ -279,7 +309,7 @@
             font-size: 1.05rem;
             line-height: 1.8;
             margin-bottom: 2rem;
-            background: #fafaf8;
+            background: #ffffa3;
             padding: 1.5rem 1.8rem;
             border-left: 4px solid var(--primary);
             border-radius: var(--radius-sm);
@@ -311,7 +341,7 @@
             display: block;
         }
         .admin-panel {
-            background: #fdfdfb;
+            background: #f9f965;
             border: 1px solid var(--border);
             padding: 1.8rem;
             margin-bottom: 2rem;
@@ -346,7 +376,7 @@
             line-height: 1.6;
             resize: vertical;
             min-height: 120px;
-            background: #fff;
+            background: #ffffa3;
             transition: border var(--transition);
             font-family: inherit;
             border-radius: var(--radius-sm);
@@ -366,7 +396,7 @@
             display: inline-flex;
             align-items: center;
             gap: 0.5rem;
-            background: #fff;
+            background: #ffffa3;
             border: 1px dashed #bbb;
             padding: 0.8rem 1.5rem;
             font-weight: 600;
@@ -493,7 +523,7 @@
             color: #888;
             padding: 3rem;
             font-style: italic;
-            background: #fafaf8;
+            background: #ffffa3;
             border: 1px dashed #dcd5cb;
             border-radius: var(--radius-sm);
         }
@@ -580,7 +610,7 @@
             flex-shrink: 0;
         }
         .profile-info-block {
-            background: #fafaf8;
+            background: #ffffa3;
             padding: 1.5rem;
             border: 1px solid var(--border);
             margin: 1rem 0;
@@ -601,7 +631,7 @@
             color: #0f0f0f;
         }
         .profile-email {
-            font-size: 0.9rem;
+            font-size: 1.2rem;
             color: #666;
         }
         .profile-name {
@@ -1163,6 +1193,8 @@
     <div class="app-wrapper">
         <nav class="navbar">
             <div class="logo">ВАСТА</div>
+            <!-- Кнопка установки приложения -->
+            <button class="install-btn hidden" id="installAppBtn">📲 Установить</button>
             <div class="nav-links">
                 <button class="nav-btn active" data-target="home-section">Главная</button>
                 <button class="nav-btn" data-target="vasta-section">Васту</button>
@@ -1827,12 +1859,15 @@
                 });
             }
 
-            // ============ ВЫХОД ============
+            // ============ ВЫХОД (с полным сбросом админки) ============
             const logoutBtn = document.getElementById('logoutBtn');
             if (logoutBtn) {
                 logoutBtn.addEventListener('click', () => {
                     currentUser = null;
                     localStorage.removeItem('vastaCurrentUser');
+                    // Сбрасываем админский статус
+                    isAdmin = false;
+                    localStorage.removeItem('vastaIsAdmin');
                     hideEditProfileForm();
                     updateAccountUI();
                     updateAdminUI();
@@ -2536,6 +2571,85 @@
                 formTitleId: 'astrologyFormTitle',
                 adminFormId: 'astrology-admin-form'
             });
+
+            // ============ УСТАНОВКА ПРИЛОЖЕНИЯ (PWA) ============
+            let deferredPrompt = null;
+            const installBtn = document.getElementById('installAppBtn');
+
+            function showInstallButton(show) {
+                if (installBtn) {
+                    if (show) {
+                        installBtn.classList.remove('hidden');
+                    } else {
+                        installBtn.classList.add('hidden');
+                    }
+                }
+            }
+
+            // Проверяем, установлено ли уже приложение
+            function isAppInstalled() {
+                // Для Android/Chrome: display-mode
+                if (window.matchMedia('(display-mode: standalone)').matches) return true;
+                // Для iOS (Safari)
+                if (window.navigator.standalone === true) return true;
+                return false;
+            }
+
+            if (installBtn) {
+                // Сначала скрываем, если уже установлено
+                if (isAppInstalled()) {
+                    showInstallButton(false);
+                }
+
+                // Слушаем событие beforeinstallprompt
+                window.addEventListener('beforeinstallprompt', (e) => {
+                    e.preventDefault();
+                    deferredPrompt = e;
+                    // Показываем кнопку только если не установлено
+                    if (!isAppInstalled()) {
+                        showInstallButton(true);
+                    }
+                });
+
+                // При клике по кнопке
+                installBtn.addEventListener('click', async () => {
+                    if (!deferredPrompt) return;
+                    deferredPrompt.prompt();
+                    const result = await deferredPrompt.userChoice;
+                    if (result.outcome === 'accepted') {
+                        console.log('Приложение установлено');
+                        showInstallButton(false);
+                    } else {
+                        console.log('Установка отклонена');
+                    }
+                    deferredPrompt = null;
+                });
+
+                // Скрываем после установки (событие appinstalled)
+                window.addEventListener('appinstalled', () => {
+                    showInstallButton(false);
+                    deferredPrompt = null;
+                });
+
+                // Также проверяем при изменении display-mode (если пользователь установил через меню браузера)
+                window.matchMedia('(display-mode: standalone)').addEventListener('change', (e) => {
+                    if (e.matches) {
+                        showInstallButton(false);
+                    } else {
+                        // Если вдруг режим изменился, но приложение не установлено – можно показать, но лучше проверить
+                        if (!isAppInstalled() && deferredPrompt) {
+                            showInstallButton(true);
+                        }
+                    }
+                });
+
+                // Для iOS: если открыто в Safari и не в standalone, показываем кнопку? 
+                // Но iOS не поддерживает beforeinstallprompt, поэтому скрываем всегда на iOS.
+                const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+                if (isIOS) {
+                    showInstallButton(false);
+                }
+            }
 
             // ============ ИНИЦИАЛИЗАЦИЯ ============
             updateAccountUI();
