@@ -1,10 +1,10 @@
 {
-  "name": "Васта",
-  "short_name": "Васта",
-  "start_url": "./?v=4"
+  "name": "ВАСТА",
+  "short_name": "ВАСТА",
+  "start_url": ".",
   "display": "standalone",
-  "background_color": "#aaaaaa",
-  "theme_color": "#000000",
+  "background_color": "#ffffff",
+  "theme_color": "#c4203a",
   "icons": [
     {
       "src": "icon-192.png",
