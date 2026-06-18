@@ -1403,7 +1403,9 @@
         </div>
         <div class="image-viewer-counter hidden-nav" id="imageViewerCounter"></div>
     </div>
-
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('./sw.js').catch(() => {});
+    }
     <script>
         (function() {
             const firebaseConfig = {
