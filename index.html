@@ -2563,61 +2563,60 @@
             const installButton = document.getElementById('installPWAButton');
             
             function isPWAInstalled() {
-                return window.matchMedia('(display-mode: standalone)').matches ||
-                       (navigator.standalone === true);
+              return window.matchMedia('(display-mode: standalone)').matches ||
+                     (navigator.standalone === true);
             }
             
-            // Показываем кнопку всегда, если приложение не установлено
             function showInstallButton() {
-                if (installButton && !isPWAInstalled()) {
-                    installButton.style.display = 'inline-flex';
-                }
+              if (installButton && !isPWAInstalled()) {
+                installButton.style.display = 'inline-flex';
+              }
             }
             
             function hideInstallButton() {
-                if (installButton) installButton.style.display = 'none';
+              if (installButton) installButton.style.display = 'none';
             }
             
-            // Перехватываем событие (для Chrome, Edge, Android)
             window.addEventListener('beforeinstallprompt', (e) => {
-                e.preventDefault();
-                deferredPrompt = e;
-                showInstallButton();
+              e.preventDefault();
+              deferredPrompt = e;
+              showInstallButton();
             });
             
-            // При клике: если есть deferredPrompt – вызываем установку, иначе показываем подсказку
             if (installButton) {
-                installButton.addEventListener('click', async () => {
-                    if (deferredPrompt) {
-                        deferredPrompt.prompt();
-                        const { outcome } = await deferredPrompt.userChoice;
-                        console.log(`PWA install outcome: ${outcome}`);
-                        deferredPrompt = null;
-                        hideInstallButton();
-                    } else {
-                        // Если событие не пришло (iOS, Firefox и т.п.)
-                        const isIOS = /iphone|ipad|ipod/.test(navigator.userAgent.toLowerCase());
-                        if (isIOS) {
-                            alert('Чтобы установить приложение, нажмите кнопку «Поделиться» (квадрат со стрелкой вверх) и выберите «На экран «Домой»».');
-                        } else {
-                            alert('Ваш браузер не поддерживает быструю установку. Откройте сайт в Chrome или Edge и попробуйте снова.');
-                        }
-                    }
-                });
+              installButton.addEventListener('click', async () => {
+                if (deferredPrompt) {
+                  deferredPrompt.prompt();
+                  const { outcome } = await deferredPrompt.userChoice;
+                  console.log('Результат установки:', outcome);
+                  deferredPrompt = null;
+                  hideInstallButton();
+                } else {
+                  // Если событие не пришло, но мы в Chrome/Edge, возможно, нужно перезагрузить или очистить кэш
+                  const ua = navigator.userAgent.toLowerCase();
+                  const isChrome = ua.includes('chrome') || ua.includes('crios');
+                  const isEdge = ua.includes('edg');
+                  const isIOS = /iphone|ipad|ipod/.test(ua);
+                  
+                  if (isIOS) {
+                    alert('Чтобы установить приложение, нажмите кнопку «Поделиться» (квадрат со стрелкой вверх) и выберите «На экран «Домой»».');
+                  } else if (isChrome || isEdge) {
+                    alert('Установка временно недоступна. Попробуйте очистить кэш браузера и перезагрузить страницу.');
+                  } else {
+                    alert('Ваш браузер не поддерживает быструю установку. Откройте сайт в Chrome или Edge.');
+                  }
+                }
+              });
             }
             
-            // При загрузке: если не установлено – показываем кнопку через 1 секунду (на случай, если beforeinstallprompt не вызвался)
+            // При загрузке: если приложение не установлено, через 1 сек пробуем показать кнопку
             window.addEventListener('load', () => {
-                if (isPWAInstalled()) {
-                    hideInstallButton();
-                } else {
-                    // Даём шанс событию beforeinstallprompt, затем показываем принудительно
-                    setTimeout(() => {
-                        if (!deferredPrompt && !isPWAInstalled()) {
-                            showInstallButton();
-                        }
-                    }, 1000);
-                }
+              if (!isPWAInstalled()) {
+                setTimeout(() => {
+                  // Если deferredPrompt ещё не пришёл, всё равно покажем (вдруг он придёт позже)
+                  showInstallButton();
+                }, 1000);
+              }
             });
 
             // ============ ИНИЦИАЛИЗАЦИЯ ============
