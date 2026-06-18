@@ -2625,6 +2625,13 @@
             updateAdminUI();
             if (isAdmin && showAdminLoginBtn) showAdminLoginBtn.style.display = 'none';
         })();
+        if ('serviceWorker' in navigator) {
+          window.addEventListener('load', () => {
+            navigator.serviceWorker.register('./sw.js')
+              .then(() => console.log('Service Worker зарегистрирован'))
+              .catch((err) => console.error('Ошибка SW:', err));
+          });
+        }
     </script>
 </body>
 </html>
