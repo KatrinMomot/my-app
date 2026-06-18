@@ -2558,44 +2558,66 @@
                 adminFormId: 'astrology-admin-form'
             });
 
-            // ============ PWA: УСТАНОВКА ПРИЛОЖЕНИЯ ============
+            // ========== PWA: УСТАНОВКА ПРИЛОЖЕНИЯ ==========
             let deferredPrompt;
             const installButton = document.getElementById('installPWAButton');
-
+            
             function isPWAInstalled() {
                 return window.matchMedia('(display-mode: standalone)').matches ||
                        (navigator.standalone === true);
             }
-
+            
+            // Показываем кнопку всегда, если приложение не установлено
             function showInstallButton() {
                 if (installButton && !isPWAInstalled()) {
                     installButton.style.display = 'inline-flex';
                 }
             }
-
+            
             function hideInstallButton() {
                 if (installButton) installButton.style.display = 'none';
             }
-
+            
+            // Перехватываем событие (для Chrome, Edge, Android)
             window.addEventListener('beforeinstallprompt', (e) => {
                 e.preventDefault();
                 deferredPrompt = e;
                 showInstallButton();
             });
-
+            
+            // При клике: если есть deferredPrompt – вызываем установку, иначе показываем подсказку
             if (installButton) {
                 installButton.addEventListener('click', async () => {
-                    if (!deferredPrompt) return;
-                    deferredPrompt.prompt();
-                    const { outcome } = await deferredPrompt.userChoice;
-                    console.log(`PWA install outcome: ${outcome}`);
-                    deferredPrompt = null;
-                    hideInstallButton();
+                    if (deferredPrompt) {
+                        deferredPrompt.prompt();
+                        const { outcome } = await deferredPrompt.userChoice;
+                        console.log(`PWA install outcome: ${outcome}`);
+                        deferredPrompt = null;
+                        hideInstallButton();
+                    } else {
+                        // Если событие не пришло (iOS, Firefox и т.п.)
+                        const isIOS = /iphone|ipad|ipod/.test(navigator.userAgent.toLowerCase());
+                        if (isIOS) {
+                            alert('Чтобы установить приложение, нажмите кнопку «Поделиться» (квадрат со стрелкой вверх) и выберите «На экран «Домой»».');
+                        } else {
+                            alert('Ваш браузер не поддерживает быструю установку. Откройте сайт в Chrome или Edge и попробуйте снова.');
+                        }
+                    }
                 });
             }
-
+            
+            // При загрузке: если не установлено – показываем кнопку через 1 секунду (на случай, если beforeinstallprompt не вызвался)
             window.addEventListener('load', () => {
-                if (isPWAInstalled()) hideInstallButton();
+                if (isPWAInstalled()) {
+                    hideInstallButton();
+                } else {
+                    // Даём шанс событию beforeinstallprompt, затем показываем принудительно
+                    setTimeout(() => {
+                        if (!deferredPrompt && !isPWAInstalled()) {
+                            showInstallButton();
+                        }
+                    }, 1000);
+                }
             });
 
             // ============ ИНИЦИАЛИЗАЦИЯ ============
